@@ -51,3 +51,14 @@ def register_incoming():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+        # Sandbox 환경용 인증 헤더
+        headers = {
+            "Authorization": "API.SENDBOX-HMAC-SHA256",
+            "Credential":    f"{COMPANY_CODE}/{ACCESS_KEY}/{today}/srwms_request",
+            "Signature":     signature,
+            "Content-Type":  "application/json"
+        }
+
++       # 이 줄을 추가해 주세요 (로그로 실제 헤더값 출력)
++       app.logger.info("▶ HEADER-Credential: %s", headers["Credential"])
+
