@@ -4,13 +4,12 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# 사방넷 API 인증 정보
+# 사방넷 풀필먼트 API 인증 정보 (Sandbox)
 COMPANY_CODE = "G001"
-ACCESS_KEY    = "TC1Fx3PzgiTqc5rG"    # api-access-key (Live)
-SECRET_KEY    = "NUr8ogvT9Fhs5i6RY7Dr" # api-secret-key (Live)
+ACCESS_KEY    = "TC1Fx3PzgiTqc5rG"    # Sandbox용 api-access-key
+SECRET_KEY    = "NUr8ogvT9Fhs5i6RY7Dr" # Sandbox용 api-secret-key
 API_URL       = "https://napi.sbfulfillment.co.kr/v2/inventory/receiving_plan"
 
-# 시그니처 생성 함수
 def generate_signature(access_key, secret_key, yyyymmdd):
     # 1) DateKey = HMAC-SHA256(secret_key, date)
     datekey = hmac.new(secret_key.encode(), yyyymmdd.encode(), hashlib.sha256).digest()
@@ -25,18 +24,18 @@ def register_incoming():
         incoming = request.json
         today = datetime.now().strftime("%Y%m%d")
 
-        # 인증용 시그니처
+        # 인증용 시그니처 생성
         signature = generate_signature(ACCESS_KEY, SECRET_KEY, today)
 
-        # 요청 바디: 그대로 넘겨받은 구조대로 사방넷 API에 전달
+        # 요청 바디는 Apps Script에서 그대로 전달된 JSON 사용
         body = incoming
 
-        # 인증 헤더 (Live 환경)
+        # Sandbox 환경용 인증 헤더
         headers = {
-            "Authorization": "LIVE-HMAC-SHA256",
-            "Credential":  f"{COMPANY_CODE}/{ACCESS_KEY}/{today}/srwms_request",
-            "Signature":    signature,
-            "Content-Type": "application/json"
+            "Authorization": "API.SENDBOX-HMAC-SHA256",
+            "Credential":    f"{COMPANY_CODE}/{ACCESS_KEY}/{today}/srwms_request",
+            "Signature":     signature,
+            "Content-Type":  "application/json"
         }
 
         # 요청 및 로그
@@ -51,5 +50,4 @@ def register_incoming():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
-    # 개발서버 모드로 0.0.0.0:5000 에서 실행
     app.run(host='0.0.0.0', port=5000)
