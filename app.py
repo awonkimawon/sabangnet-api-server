@@ -1,8 +1,5 @@
 from flask import Flask, request, jsonify
-import hmac
-import hashlib
-import base64
-import requests
+import hmac, hashlib, base64, requests
 from datetime import datetime
 
 app = Flask(__name__)
@@ -23,12 +20,8 @@ def generate_signature(access_key, secret_key, yyyymmdd):
 @app.route('/register-incoming', methods=['POST'])
 def register_incoming():
     try:
-        data = request.json  # Google Apps Script에서 전달한 JSON 데이터
-
-        # 오늘 날짜 (서버 기준)
+        data = request.json
         today = datetime.now().strftime("%Y%m%d")
-
-        # 시그니처 생성
         signature = generate_signature(ACCESS_KEY, SECRET_KEY, today)
 
         headers = {
@@ -38,16 +31,18 @@ def register_incoming():
             "Content-Type": "application/json"
         }
 
-        # 사방넷 API로 POST 요청
+        # 로그 출력
+        app.logger.info("▶ 요청 데이터: %s", data)
+
+        # 사방넷 API 요청
         response = requests.post(API_URL, json=data, headers=headers)
 
-        print("▶ 요청 데이터:", data)
-        print("▶ 사방넷 응답:", response.status_code, response.text)
+        # 응답 로그 출력
+        app.logger.info("▶ 사방넷 응답: %s %s", response.status_code, response.text)
 
         return jsonify({"status": "ok", "response": response.json()}), 200
-
     except Exception as e:
-        print("▶ 오류 발생:", e)
+        app.logger.error("▶ 오류 발생: %s", str(e))
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
