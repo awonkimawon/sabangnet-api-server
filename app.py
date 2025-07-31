@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 import requests
+import os
 
 app = Flask(__name__)
 
@@ -11,15 +12,26 @@ def home():
 def register():
     data = request.get_json()
 
-    # 입력된 값 확인용 로그
-    app.logger.info(f"입력된 데이터: {data}")
+    # 사방넷 API 요청 구성
+    sabangnet_url = "https://wms.sabangnet.co.kr/v2/inventory/receiving_plan"
 
-    # TODO: 실제 사방넷 API 호출을 여기에 작성할 예정
-    dummy_result = {
-        "status": "success",
-        "message": "이건 테스트 응답입니다. 사방넷 API 연동 예정"
+    headers = {
+        "Content-Type": "application/json",
+        "access-key": data["access_key"],
+        "secret-key": data["secret_key"],
+        "code": "G001"  # 회사코드 고정
     }
-    return jsonify(dummy_result)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    payload = {
+        "member_id": data["member_id"],
+        "receiving_plan_code": data["receiving_plan_code"],
+        "plan_date": data["plan_date"],
+        "memo": data["memo"],
+        "plan_product_list": data["plan_product_list"]
+    }
+
+    try:
+        res = requests.post(sabangnet_url, headers=headers, json=payload)
+        return jsonify(res.json())
+    except Exception as e:
+        return jsonify({"code": "9998", "message": str(e)}), 500
