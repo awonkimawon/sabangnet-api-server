@@ -19,7 +19,7 @@ def register():
         "Content-Type": "application/json",
         "access-key": data["access_key"],
         "secret-key": data["secret_key"],
-        "code": "G001"  # 회사코드 고정
+        "code": data["company_code"]  # ← 시트에서 입력된 회사코드 사용
     }
 
     payload = {
@@ -35,3 +35,7 @@ def register():
         return jsonify(res.json())
     except Exception as e:
         return jsonify({"code": "9998", "message": str(e)}), 500
+
+# 🔽 직접 실행 시 필요한 부분 (Render에서는 무시됨)
+if __name__ == '__main__':
+    app.run(debug=True)
