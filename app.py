@@ -1,6 +1,9 @@
 from flask import Flask, request, jsonify
 import requests
-import os
+import hmac
+import hashlib
+import base64
+import datetime
 
 app = Flask(__name__)
 
@@ -10,32 +13,42 @@ def home():
 
 @app.route('/register', methods=['POST'])
 def register():
-    data = request.get_json()
-
-    sabangnet_url = "https://wms.sabangnet.co.kr/v2/inventory/receiving_plan"
-
-    headers = {
-        "Content-Type": "application/json",
-        "access-key": data["access_key"],
-        "secret-key": data["secret_key"],
-        "code": data["company_code"]  # 시트에서 입력된 회사코드 사용
-    }
-
-    payload = {
-        "member_id": data["member_id"],
-        "receiving_plan_code": data["receiving_plan_code"],
-        "plan_date": data["plan_date"],
-        "memo": data["memo"],
-        "plan_product_list": data["plan_product_list"]
-    }
-
     try:
-        res = requests.post(sabangnet_url, headers=headers, json=payload)
-        return jsonify(res.json())
-    except Exception as e:
-        return jsonify({"code": "9998", "message": str(e)}), 500
+        data = request.get_json()
 
-# ✅ Render가 요구하는 포트 환경변수 사용 (필수!)
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 10000))
-    app.run(debug=True, host="0.0.0.0", port=port)
+        access_key = data["access_key"]
+        secret_key = data["secret_key"]
+        company_code = "G001"
+        member_id = "G0542"
+        today = datetime.datetime.now().strftime('%Y%m%d')
+
+        # Step 1: Signature 생성
+        datekey = hmac.new(secret_key.encode(), today.encode(), hashlib.sha256).digest()
+        signkey = hmac.new(datekey, access_key.encode(), hashlib.sha256).digest()
+        signature = base64.b64encode(signkey).decode()
+
+        # Step 2: 헤더 구성
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": "LIVE-HMAC-SHA256",
+            "Credential": f"LIVE/{company_code}/{access_key}/{today}/swms_request",
+            "Signature": signature
+        }
+
+        # Step 3: Body 구성
+        payload = {
+            "member_id": member_id,
+            "receiving_plan_code": data["receiving_plan_code"],
+            "plan_date": data["plan_date"],
+            "memo": data["memo"],
+            "plan_product_list": data["plan_product_list"]
+        }
+
+        # Step 4: 요청
+        url = "https://napi.sbfulfilment.co.kr/v2/inventory/receiving_plan"
+        res = requests.post(url, headers=headers, json=payload)
+
+        return jsonify(res.json())
+
+    except Exception as e:
+        return jsonify({"code": "9999", "message": str(e)}), 500
